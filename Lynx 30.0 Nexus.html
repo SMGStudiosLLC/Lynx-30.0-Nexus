@@ -579,6 +579,54 @@
         }
         #commandSuggestions.show { transform: translateY(0); }
 
+        /* Smart Suggestions Area */
+        .smart-suggestions-area {
+            display: flex; /* Use flexbox to lay out suggestions horizontally */
+            justify-content: flex-start; /* Align suggestions to the start */
+            align-items: center;
+            flex-wrap: wrap; /* Allow suggestions to wrap to the next line if needed */
+            padding-top: 8px; /* Add some space above the suggestions */
+            min-height: 30px; /* Ensure area is visible even when empty for dev purposes, can be removed later */
+            gap: 8px; /* Space between suggestion buttons */
+        }
+
+        .smart-suggestion-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border: 1px solid var(--border-light);
+            border-radius: 15px; /* Pill-shaped */
+            padding: 5px 12px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            opacity: 0.9;
+        }
+
+        .smart-suggestion-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            opacity: 1;
+        }
+
+        .smart-suggestion-btn:active {
+            transform: translateY(0);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .chat-container.dark .smart-suggestion-btn {
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-dark);
+            border: 1px solid var(--border-dark);
+        }
+
+        .chat-container.dark .smart-suggestion-btn:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .chat-container.dark .smart-suggestion-btn:active {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
         /* Thinking Animation */
         .thinking-animation { display: inline-block; margin-left: 8px; line-height: 1; }
         .thinking-dot { display: inline-block; width: 5px; height: 5px; margin: 0 1.5px; background-color: currentColor; opacity: 0.7; border-radius: 50%; animation: blink 1.4s infinite both; }
@@ -1138,6 +1186,12 @@
                     <button class="send-btn" onclick="sendMessage()" aria-label="Send Message" title="Send">
                         <i class="fa fa-arrow-up"></i> <!-- Changed from arrow-right to arrow-up -->
                     </button>
+                </div>
+                <div class="smart-suggestions-area" id="smartSuggestionsArea">
+                    <!-- Suggestion buttons will be dynamically added here by JavaScript -->
+                    <!-- Example structure for a suggestion button:
+                    <button class="smart-suggestion-btn">Example suggestion?</button>
+                    -->
                 </div>
             </div>
         </div>
@@ -2577,6 +2631,46 @@
         }
 
         /***** UI & DROPDOWNS *****/
+        function displaySmartSuggestions(responseText) { // responseText can be used in future for context
+            const suggestionsArea = document.getElementById('smartSuggestionsArea');
+            if (!suggestionsArea) return;
+            suggestionsArea.innerHTML = ''; // Clear old suggestions
+
+            const DUMMY_SUGGESTIONS = [
+                "Tell me more about that.",
+                "Can you explain that differently?",
+                "What's the next step?",
+                "Interesting, save this idea.",
+                "How does this relate to X?",
+                "Summarize that for me.",
+                "Give me an example."
+            ];
+
+            // Randomly decide to show 0, 1, or 2 suggestions for this mock-up
+            const numberOfSuggestions = Math.floor(Math.random() * 3);
+            if (numberOfSuggestions === 0) {
+                return; // Show no suggestions this time
+            }
+
+            // Shuffle and pick suggestions
+            const shuffledSuggestions = [...DUMMY_SUGGESTIONS].sort(() => 0.5 - Math.random());
+            const selectedSuggestions = shuffledSuggestions.slice(0, numberOfSuggestions);
+
+            selectedSuggestions.forEach(text => {
+                const btn = document.createElement('button');
+                btn.className = 'smart-suggestion-btn';
+                btn.textContent = text;
+                btn.onclick = () => {
+                    const userInput = document.getElementById('userInput');
+                    userInput.value = text;
+                    userInput.focus();
+                    // Optionally, clear suggestions after clicking one
+                    // suggestionsArea.innerHTML = ''; 
+                };
+                suggestionsArea.appendChild(btn);
+            });
+        }
+
         function populateModelDropdown() {
             const dropdown = document.getElementById('modelDropdown')?.querySelector('ul');
             if (!dropdown) return;
@@ -3216,6 +3310,7 @@
                 
                 // Ensure we save the full chat state
                 saveChatsToLocalStorage();
+                displaySmartSuggestions(fullResponse); // Display suggestions
             } catch (error) {
                 console.error("Error streaming response:", error);
                 replaceThinkingMessage(messageId, fullResponse, false);
@@ -3244,6 +3339,9 @@
 
                     if (!isError && ttsEnabled && !isVoiceModeActive) { // Don't use old TTS if in Voice Mode
                         speakText(newText);
+                    }
+                    if (!isError) {
+                        displaySmartSuggestions(newText); // Display suggestions for non-error full messages
                     }
                 } else {
                     console.warn("Thinking placeholder ID not found, adding as new message:", placeholderId);
